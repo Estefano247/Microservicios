@@ -1,0 +1,28 @@
+# Stage 1: Compilación
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+
+# Copiar POM raíz e instalarlo
+COPY pom.xml ./pom.xml
+RUN mvn -N -B install
+
+# Copiar POM intermedio (microservices) e instalarlo
+COPY microservices/pom.xml ./microservices/pom.xml
+RUN cd microservices && mvn -N -B install
+
+# Copiar common-exception (dependencia compartida) y compilarlo
+COPY microservices/common-exception/pom.xml ./microservices/common-exception/pom.xml
+COPY microservices/common-exception/src ./microservices/common-exception/src
+RUN cd microservices/common-exception && mvn -B -DskipTests install
+
+# Copiar cart-microservice y compilarlo
+COPY microservices/cart-microservice/pom.xml ./microservices/cart-microservice/pom.xml
+COPY microservices/cart-microservice/src ./microservices/cart-microservice/src
+RUN cd microservices/cart-microservice && mvn -B -DskipTests package
+
+# Stage 2: Ejecución
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /build/microservices/cart-microservice/target/*.jar app.jar
+EXPOSE 8094
+ENTRYPOINT ["java", "-jar", "app.jar"]

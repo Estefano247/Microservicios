@@ -1,0 +1,306 @@
+services:
+  # --- INFRAESTRUCTURA ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    ports: [ "5432:5432" ]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks: [ microservices ]
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  config-server:
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
+    container_name: config-server
+    ports: [ "8888:8888" ]
+    networks: [ microservices ]
+    environment: [ JAVA_OPTS=-Xmx512m -Xms256m ]
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8888 || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  discovery-server:
+    build:
+      context: .
+      dockerfile: discovery-server/Dockerfile
+    container_name: discovery-server
+    ports: [ "8761:8761" ]
+    environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8761 || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  # --- MICROSERVICIOS DE NEGOCIO ---
+  user-microservice:
+    build:
+      context: .
+      dockerfile: microservices/user-microservice/Dockerfile
+    container_name: user-microservice
+    ports: [ "8091:8091" ]
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/user_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
+      - JWT_SECRET_KEY=ZmFudGFzdGljLWNvZGUtZ2VtaW5pLWF1dGhlbnRpYy1hbmQtY2FuZG9yLXNlY3JldC1rZXk=
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8091 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  product-microservice:
+    build:
+      context: .
+      dockerfile: microservices/product-microservice/Dockerfile
+    container_name: product-microservice
+    ports: [ "8092:8092" ]
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/product_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8092 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  inventory-microservice:
+    build:
+      context: .
+      dockerfile: microservices/inventory-microservice/Dockerfile
+    container_name: inventory-microservice
+    ports: [ "8093:8093" ]
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventory_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8093 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  cart-microservice:
+    build:
+      context: .
+      dockerfile: microservices/cart-microservice/Dockerfile
+    container_name: cart-microservice
+    ports: [ "8094:8094" ]
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/cart_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8094 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  order-microservice:
+    build:
+      context: .
+      dockerfile: microservices/order-microservice/Dockerfile
+    container_name: order-microservice
+    ports: [ "8095:8095" ]
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/order_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8095 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  analytics-dashboard:
+    build:
+      context: ./analitycs-dashboard
+      dockerfile: Dockerfile
+    container_name: analytics-dashboard
+    ports: [ "8501:8501" ]
+    environment:
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - EUREKA_SERVER=http://discovery-server:8761/eureka
+      - EUREKA_PORT=8501
+      - LOG_LEVEL=INFO
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8501/_stcore/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: microservices/api-gateway/Dockerfile
+    container_name: api-gateway
+    ports: [ "8080:8080" ]
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks: [ microservices ]
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8080 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  microservices:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

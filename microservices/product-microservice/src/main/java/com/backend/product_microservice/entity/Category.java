@@ -1,0 +1,3 @@
+package com.backend.product_microservice.entity;
+public enum Category { NOVELA, CIENCIA_FICCION, FICCION, HISTORIA, BIOGRAFIA, POESIA,
+    INFANTIL, TECNICO, ENSAYO, MISTERIO, DRAMA, FANTASIA, ROMANCE, COMEDIA }

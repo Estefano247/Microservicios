@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  targetNamespace="http://libreria-microservicios.com/bpmn"
+  id="definitions-registro">
+
+  <bpmn:process id="ProcesoRegistroAutenticacion" name="Registro y Autenticación de Usuario" isExecutable="true">
+    
+    <!-- PARTICIPANTES / LANES -->
+    <bpmn:laneSet id="laneSet_01">
+      <bpmn:lane id="Lane_Usuario" name="Usuario">
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RegistroForm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LoginForm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Exito</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Error</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Sistema" name="Sistema (user-microservice)">
+        <bpmn:flowNodeRef>Gateway_TipoOperacion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidarDatos</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_DatosValidos</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CrearUsuario</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GenerarJWT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidarCredenciales</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_CredencialesValidas</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RegistrarSesion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RegistrarIntentoFallido</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_CuentaBloqueada</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_BD" name="Base de Datos (PostgreSQL)">
+        <bpmn:flowNodeRef>Task_VerificarUnicidad</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PersistirUsuario</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConsultarUsuario</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PersistirSesion</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- EVENTOS -->
+    <bpmn:startEvent id="StartEvent_1" name="Inicio">
+      <bpmn:outgoing>Flow_Inicio_Tipo</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEvent_Exito" name="Operación exitosa">
+      <bpmn:incoming>Flow_JWT_Exito</bpmn:incoming>
+      <bpmn:incoming>Flow_LoginExito_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Error" name="Error">
+      <bpmn:incoming>Flow_ErrorValidacion_Fin</bpmn:incoming>
+      <bpmn:incoming>Flow_CuentaBloqueada_Fin</bpmn:incoming>
+      <bpmn:incoming>Flow_CredencialesInvalidas_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- TAREAS USUARIO -->
+    <bpmn:userTask id="Task_RegistroForm" name="Completar formulario de registro" camunda:assignee="usuario">
+      <bpmn:incoming>Flow_Registro_Form</bpmn:incoming>
+      <bpmn:outgoing>Flow_Form_Validar</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_LoginForm" name="Ingresar credenciales (email + password)" camunda:assignee="usuario">
+      <bpmn:incoming>Flow_Login_Form</bpmn:incoming>
+      <bpmn:outgoing>Flow_Form_ValidarCred</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- GATEWAYS SISTEMA -->
+    <bpmn:exclusiveGateway id="Gateway_TipoOperacion" name="¿Registro o Login?" default="Flow_Default_Login">
+      <bpmn:incoming>Flow_Inicio_Tipo</bpmn:incoming>
+      <bpmn:outgoing>Flow_Registro</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Login</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_DatosValidos" name="¿Datos válidos?">
+      <bpmn:incoming>Flow_VerifUnicidad_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_DatosOK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DatosError</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_CredencialesValidas" name="¿Credenciales correctas?">
+      <bpmn:incoming>Flow_ValidarCred_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_CredOK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CredError</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_CuentaBloqueada" name="¿Cuenta bloqueada?">
+      <bpmn:incoming>Flow_ContarIntento_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_Bloqueada</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoBloqueada</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- TAREAS DE SERVICIO - SISTEMA -->
+    <bpmn:serviceTask id="Task_ValidarDatos" name="Validar datos del registro" camunda:expression="validationService.validateRegisterRequest(request)">
+      <bpmn:incoming>Flow_Form_Validar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Validar_Verif</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_CrearUsuario" name="Crear nuevo usuario en BD" camunda:expression="userService.createUser(request)">
+      <bpmn:incoming>Flow_DatosOK</bpmn:incoming>
+      <bpmn:outgoing>Flow_Crear_GenerarJWT</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_GenerarJWT" name="Generar JWT token">
+      <bpmn:incoming>Flow_Crear_GenerarJWT</bpmn:incoming>
+      <bpmn:incoming>Flow_LoginOK_GenerarJWT</bpmn:incoming>
+      <bpmn:outgoing>Flow_JWT_Exito</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ValidarCredenciales" name="Validar email y password">
+      <bpmn:incoming>Flow_Form_ValidarCred</bpmn:incoming>
+      <bpmn:outgoing>Flow_Validar_Consultar</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_RegistrarSesion" name="Registrar sesión exitosa">
+      <bpmn:incoming>Flow_CredOK</bpmn:incoming>
+      <bpmn:outgoing>Flow_LoginOK_GenerarJWT</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_RegistrarIntentoFallido" name="Incrementar contador de intentos">
+      <bpmn:incoming>Flow_CredError</bpmn:incoming>
+      <bpmn:outgoing>Flow_ContarIntento_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- TAREAS DE SERVICIO - BD -->
+    <bpmn:serviceTask id="Task_VerificarUnicidad" name="Verificar email único en DB">
+      <bpmn:incoming>Flow_Validar_Verif</bpmn:incoming>
+      <bpmn:outgoing>Flow_VerifUnicidad_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_PersistirUsuario" name="INSERT en users_tb">
+      <bpmn:incoming>Flow_Persistir_Usuario</bpmn:incoming>
+      <bpmn:outgoing>Flow_Persistir_OK</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ConsultarUsuario" name="SELECT usuario por email">
+      <bpmn:incoming>Flow_Validar_Consultar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Consultar_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_PersistirSesion" name="INSERT en user_sessions_tb">
+      <bpmn:incoming>Flow_Persistir_Sesion</bpmn:incoming>
+      <bpmn:outgoing>Flow_PersistirSesion_OK</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- FLUJOS DE SECUENCIA -->
+    <bpmn:sequenceFlow id="Flow_Inicio_Tipo" sourceRef="StartEvent_1" targetRef="Gateway_TipoOperacion" />
+    <bpmn:sequenceFlow id="Flow_Registro" sourceRef="Gateway_TipoOperacion" targetRef="Task_RegistroForm" name="Registro">
+      <bpmn:conditionExpression xsi:type="tFormalExpression" language="groovy">operacion == 'registro'</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Login" sourceRef="Gateway_TipoOperacion" targetRef="Task_LoginForm" name="Login" />
+    <bpmn:sequenceFlow id="Flow_Form_Validar" sourceRef="Task_RegistroForm" targetRef="Task_ValidarDatos" />
+    <bpmn:sequenceFlow id="Flow_Validar_Verif" sourceRef="Task_ValidarDatos" targetRef="Task_VerificarUnicidad" />
+    <bpmn:sequenceFlow id="Flow_VerifUnicidad_Result" sourceRef="Task_VerificarUnicidad" targetRef="Gateway_DatosValidos" />
+    <bpmn:sequenceFlow id="Flow_DatosOK" sourceRef="Gateway_DatosValidos" targetRef="Task_CrearUsuario" name="Válido">
+      <bpmn:conditionExpression xsi:type="tFormalExpression" language="groovy">valido == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_DatosError" sourceRef="Gateway_DatosValidos" targetRef="EndEvent_Error" name="Inválido" />
+    <bpmn:sequenceFlow id="Flow_Crear_GenerarJWT" sourceRef="Task_CrearUsuario" targetRef="Task_GenerarJWT" />
+    <bpmn:sequenceFlow id="Flow_JWT_Exito" sourceRef="Task_GenerarJWT" targetRef="EndEvent_Exito" />
+    <bpmn:sequenceFlow id="Flow_Form_ValidarCred" sourceRef="Task_LoginForm" targetRef="Task_ValidarCredenciales" />
+    <bpmn:sequenceFlow id="Flow_Validar_Consultar" sourceRef="Task_ValidarCredenciales" targetRef="Task_ConsultarUsuario" />
+    <bpmn:sequenceFlow id="Flow_Consultar_Result" sourceRef="Task_ConsultarUsuario" targetRef="Gateway_CredencialesValidas" />
+    <bpmn:sequenceFlow id="Flow_CredOK" sourceRef="Gateway_CredencialesValidas" targetRef="Task_RegistrarSesion" name="Correctas">
+      <bpmn:conditionExpression xsi:type="tFormalExpression" language="groovy">credencialesValidas == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CredError" sourceRef="Gateway_CredencialesValidas" targetRef="Task_RegistrarIntentoFallido" name="Incorrectas" />
+    <bpmn:sequenceFlow id="Flow_ContarIntento_Result" sourceRef="Task_RegistrarIntentoFallido" targetRef="Gateway_CuentaBloqueada" />
+    <bpmn:sequenceFlow id="Flow_Bloqueada" sourceRef="Gateway_CuentaBloqueada" targetRef="EndEvent_Error" name="Bloqueada">
+      <bpmn:conditionExpression xsi:type="tFormalExpression" language="groovy">intentos >= 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoBloqueada" sourceRef="Gateway_CuentaBloqueada" targetRef="EndEvent_Error" name="Reintentar" />
+    <bpmn:sequenceFlow id="Flow_LoginOK_GenerarJWT" sourceRef="Task_RegistrarSesion" targetRef="Task_GenerarJWT" />
+
+    <!-- FLUJOS BD -->
+    <bpmn:sequenceFlow id="Flow_Persistir_Usuario" sourceRef="Task_VerificarUnicidad" targetRef="Task_PersistirUsuario" />
+    <bpmn:sequenceFlow id="Flow_Persistir_OK" sourceRef="Task_PersistirUsuario" targetRef="Task_PersistirSesion" />
+    <bpmn:sequenceFlow id="Flow_PersistirSesion_OK" sourceRef="Task_PersistirSesion" targetRef="Task_CrearUsuario" />
+
+  </bpmn:process>
+
+  <!-- DIAGRAMA -->
+  <bpmndi:BPMNDiagram id="Diagram_Registro">
+    <bpmndi:BPMNPlane id="Plane_Registro" bpmnElement="ProcesoRegistroAutenticacion">
+      
+      <!-- Pools/Lanes -->
+      <bpmndi:BPMNShape id="Lane_Usuario_di" bpmnElement="Lane_Usuario" isHorizontal="true">
+        <dc:Bounds x="50" y="50" width="1200" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Sistema_di" bpmnElement="Lane_Sistema" isHorizontal="true">
+        <dc:Bounds x="50" y="200" width="1200" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_BD_di" bpmnElement="Lane_BD" isHorizontal="true">
+        <dc:Bounds x="50" y="450" width="1200" height="150" />
+      </bpmndi:BPMNShape>
+
+      <!-- Shapes -->
+      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="110" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_TipoOperacion_di" bpmnElement="Gateway_TipoOperacion">
+        <dc:Bounds x="170" y="103" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RegistroForm_di" bpmnElement="Task_RegistroForm">
+        <dc:Bounds x="280" y="95" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_LoginForm_di" bpmnElement="Task_LoginForm">
+        <dc:Bounds x="450" y="95" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidarDatos_di" bpmnElement="Task_ValidarDatos">
+        <dc:Bounds x="280" y="260" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_VerificarUnicidad_di" bpmnElement="Task_VerificarUnicidad">
+        <dc:Bounds x="280" y="500" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_DatosValidos_di" bpmnElement="Gateway_DatosValidos">
+        <dc:Bounds x="470" y="493" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PersistirUsuario_di" bpmnElement="Task_PersistirUsuario">
+        <dc:Bounds x="600" y="500" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PersistirSesion_di" bpmnElement="Task_PersistirSesion">
+        <dc:Bounds x="780" y="500" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CrearUsuario_di" bpmnElement="Task_CrearUsuario">
+        <dc:Bounds x="600" y="260" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GenerarJWT_di" bpmnElement="Task_GenerarJWT">
+        <dc:Bounds x="780" y="260" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidarCredenciales_di" bpmnElement="Task_ValidarCredenciales">
+        <dc:Bounds x="630" y="260" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ConsultarUsuario_di" bpmnElement="Task_ConsultarUsuario">
+        <dc:Bounds x="800" y="500" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_CredencialesValidas_di" bpmnElement="Gateway_CredencialesValidas">
+        <dc:Bounds x="980" y="493" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RegistrarSesion_di" bpmnElement="Task_RegistrarSesion">
+        <dc:Bounds x="980" y="260" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RegistrarIntentoFallido_di" bpmnElement="Task_RegistrarIntentoFallido">
+        <dc:Bounds x="800" y="260" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_CuentaBloqueada_di" bpmnElement="Gateway_CuentaBloqueada">
+        <dc:Bounds x="980" y="253" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Exito_di" bpmnElement="EndEvent_Exito">
+        <dc:Bounds x="1120" y="110" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Error_di" bpmnElement="EndEvent_Error">
+        <dc:Bounds x="1120" y="270" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <!-- Edges -->
+      <bpmndi:BPMNEdge id="Flow_Inicio_Tipo_di" bpmnElement="Flow_Inicio_Tipo">
+        <di:waypoint x="116" y="128" />
+        <di:waypoint x="170" y="128" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Registro_di" bpmnElement="Flow_Registro">
+        <di:waypoint x="195" y="128" />
+        <di:waypoint x="280" y="128" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Login_di" bpmnElement="Flow_Login">
+        <di:waypoint x="220" y="128" />
+        <di:waypoint x="450" y="128" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

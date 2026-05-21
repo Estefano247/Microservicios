@@ -1,0 +1,6 @@
+streamlit
+pandas
+sqlalchemy
+psycopg2-binary
+plotly
+py_eureka_client

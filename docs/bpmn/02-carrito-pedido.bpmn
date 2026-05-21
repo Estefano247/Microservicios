@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  targetNamespace="http://libreria-microservicios.com/bpmn"
+  id="definitions-carrito">
+
+  <bpmn:process id="ProcesoCarritoPedido" name="Gestión de Carrito y Creación de Pedido" isExecutable="true">
+    
+    <!-- LANES -->
+    <bpmn:laneSet id="laneSet_02">
+      <bpmn:lane id="Lane_Usuario_Carrito" name="Usuario">
+        <bpmn:flowNodeRef>StartEvent_Carrito</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NavegarProductos</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AgregarAlCarrito</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConfirmarPedido</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_PedidoCreado</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Gateway" name="API Gateway">
+        <bpmn:flowNodeRef>Gateway_Route</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FiltrarJWT</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Cart" name="Cart Microservice">
+        <bpmn:flowNodeRef>Task_RecibirItem</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConsultarProducto</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_VerificarStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AgregarItemBD</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReducirStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ObtenerCarrito</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_VaciarCarrito</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_StockSuficiente</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_StockInsuficiente</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Product" name="Product Microservice">
+        <bpmn:flowNodeRef>Task_BuscarProductoByID</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Inventory" name="Inventory Microservice">
+        <bpmn:flowNodeRef>Task_ConsultarStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DescontarStock</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Order" name="Order Microservice">
+        <bpmn:flowNodeRef>Task_CrearOrden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PersistirOrden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ActualizarEstado</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- EVENTOS -->
+    <bpmn:startEvent id="StartEvent_Carrito" name="Usuario accede al sistema">
+      <bpmn:outgoing>Flow_Inicio_Navegar</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEvent_PedidoCreado" name="Pedido creado exitosamente">
+      <bpmn:incoming>Flow_EstadoConfirmado_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_StockInsuficiente" name="Error: stock insuficiente">
+      <bpmn:incoming>Flow_StockNoSuficiente_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- TAREAS USUARIO -->
+    <bpmn:userTask id="Task_NavegarProductos" name="Navegar / buscar productos" camunda:assignee="usuario">
+      <bpmn:incoming>Flow_Inicio_Navegar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Navegar_Agregar</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_AgregarAlCarrito" name="Seleccionar producto y cantidad" camunda:assignee="usuario">
+      <bpmn:incoming>Flow_Navegar_Agregar</bpmn:incoming>
+      <bpmn:incoming>Flow_StockOK_Reintentar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Agregar_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ConfirmarPedido" name="Confirmar carrito y crear pedido" camunda:assignee="usuario">
+      <bpmn:incoming>Flow_ItemAgregado_Continuar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Confirmar_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- GATEWAY -->
+    <bpmn:exclusiveGateway id="Gateway_Route" name="Ruteo por path">
+      <bpmn:incoming>Flow_Agregar_Gateway</bpmn:incoming>
+      <bpmn:incoming>Flow_Confirmar_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Route_Cart</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Route_Order</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- FILTER JWT -->
+    <bpmn:serviceTask id="Task_FiltrarJWT" name="Validar JWT y extraer userId">
+      <bpmn:incoming>Flow_Route_Cart</bpmn:incoming>
+      <bpmn:incoming>Flow_Route_Order</bpmn:incoming>
+      <bpmn:outgoing>Flow_Filter_Cart</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Filter_Order</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- CART SERVICE -->
+    <bpmn:serviceTask id="Task_RecibirItem" name="POST /api/v1/cart/usuario/{id}/items">
+      <bpmn:incoming>Flow_Filter_Cart</bpmn:incoming>
+      <bpmn:outgoing>Flow_Recibir_ConsultarProd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ConsultarProducto" name="Feign: getProductById(id)">
+      <bpmn:incoming>Flow_Recibir_ConsultarProd</bpmn:incoming>
+      <bpmn:outgoing>Flow_ConsultarProd_VerifStock</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_VerificarStock" name="Feign: getInventoryByProductId(id)">
+      <bpmn:incoming>Flow_ConsultarProd_VerifStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_VerifStock_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_AgregarItemBD" name="Persistir item en carrito_items_tb">
+      <bpmn:incoming>Flow_StockOK_Agregar</bpmn:incoming>
+      <bpmn:outgoing>Flow_AgregarItem_ReducirStock</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ReducirStock" name="Feign: PATCH reduceStock(id, quantity)">
+      <bpmn:incoming>Flow_AgregarItem_ReducirStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReducirStock_OK</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- GATEWAY CART -->
+    <bpmn:exclusiveGateway id="Gateway_StockSuficiente" name="¿Stock ≥ cantidad?">
+      <bpmn:incoming>Flow_VerifStock_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_StockOK_Agregar</bpmn:outgoing>
+      <bpmn:outgoing>Flow_StockNoSuficiente_Fin</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- TAREAS PRODUCT -->
+    <bpmn:serviceTask id="Task_BuscarProductoByID" name="SELECT * FROM products_tb WHERE id = ?">
+      <bpmn:incoming>Flow_ConsultarProd_BD</bpmn:incoming>
+      <bpmn:outgoing>Flow_BD_Producto_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- TAREAS INVENTORY -->
+    <bpmn:serviceTask id="Task_ConsultarStock" name="SELECT quantity FROM inventory_tb WHERE product_id = ?">
+      <bpmn:incoming>Flow_VerifStock_BD</bpmn:incoming>
+      <bpmn:outgoing>Flow_BD_Stock_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_DescontarStock" name="UPDATE stock SET quantity = quantity - ? WHERE id = ?">
+      <bpmn:incoming>Flow_DescontarStock_BD</bpmn:incoming>
+      <bpmn:outgoing>Flow_BD_Stock_Updated</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- ORDER FLOW -->
+    <bpmn:serviceTask id="Task_ObtenerCarrito" name="Feign: getCartByUsuario(id)">
+      <bpmn:incoming>Flow_Filter_Order</bpmn:incoming>
+      <bpmn:outgoing>Flow_ObtenerCarrito_Crear</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_CarritoVacio" name="¿Carrito tiene items?">
+      <bpmn:incoming>Flow_ObtenerCarrito_Crear</bpmn:incoming>
+      <bpmn:outgoing>Flow_CarritoOK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CarritoVacio_Fin</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_CarritoVacio" name="Error: carrito vacío">
+      <bpmn:incoming>Flow_CarritoVacio_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="Task_CrearOrden" name="Construir entidad Order con items del carrito">
+      <bpmn:incoming>Flow_CarritoOK</bpmn:incoming>
+      <bpmn:outgoing>Flow_Crear_Persistir</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_PersistirOrden" name="INSERT order_tb + orden_items_tb">
+      <bpmn:incoming>Flow_Crear_Persistir</bpmn:incoming>
+      <bpmn:outgoing>Flow_Persistir_VaciarCarrito</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_VaciarCarrito" name="Feign: clearCart(id)">
+      <bpmn:incoming>Flow_Persistir_VaciarCarrito</bpmn:incoming>
+      <bpmn:outgoing>Flow_VaciarCarrito_Confirmar</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ActualizarEstado" name="Marcar estado como PENDIENTE">
+      <bpmn:incoming>Flow_VaciarCarrito_Confirmar</bpmn:incoming>
+      <bpmn:outgoing>Flow_EstadoConfirmado_Fin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_CarritoVacio_Error" name="Error: carrito vacío">
+      <bpmn:incoming>Flow_CarritoVacio_Order</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- FLUJOS -->
+    <bpmn:sequenceFlow id="Flow_Inicio_Navegar" sourceRef="StartEvent_Carrito" targetRef="Task_NavegarProductos" />
+    <bpmn:sequenceFlow id="Flow_Navegar_Agregar" sourceRef="Task_NavegarProductos" targetRef="Task_AgregarAlCarrito" />
+    <bpmn:sequenceFlow id="Flow_StockOK_Reintentar" sourceRef="EndEvent_StockInsuficiente" targetRef="Task_AgregarAlCarrito" />
+    <bpmn:sequenceFlow id="Flow_Agregar_Gateway" sourceRef="Task_AgregarAlCarrito" targetRef="Gateway_Route" />
+    <bpmn:sequenceFlow id="Flow_ItemAgregado_Continuar" sourceRef="Task_ReducirStock" targetRef="Task_ConfirmarPedido" />
+    <bpmn:sequenceFlow id="Flow_Confirmar_Gateway" sourceRef="Task_ConfirmarPedido" targetRef="Gateway_Route" />
+    <bpmn:sequenceFlow id="Flow_Route_Cart" sourceRef="Gateway_Route" targetRef="Task_FiltrarJWT" name="POST /cart/.../items" />
+    <bpmn:sequenceFlow id="Flow_Route_Order" sourceRef="Gateway_Route" targetRef="Task_FiltrarJWT" name="POST /orders" />
+    <bpmn:sequenceFlow id="Flow_Filter_Cart" sourceRef="Task_FiltrarJWT" targetRef="Task_RecibirItem" />
+    <bpmn:sequenceFlow id="Flow_Filter_Order" sourceRef="Task_FiltrarJWT" targetRef="Task_ObtenerCarrito" />
+    <bpmn:sequenceFlow id="Flow_Recibir_ConsultarProd" sourceRef="Task_RecibirItem" targetRef="Task_ConsultarProducto" />
+    <bpmn:sequenceFlow id="Flow_ConsultarProd_VerifStock" sourceRef="Task_ConsultarProducto" targetRef="Task_VerificarStock" />
+    <bpmn:sequenceFlow id="Flow_VerifStock_Result" sourceRef="Task_VerificarStock" targetRef="Gateway_StockSuficiente" />
+    <bpmn:sequenceFlow id="Flow_StockOK_Agregar" sourceRef="Gateway_StockSuficiente" targetRef="Task_AgregarItemBD" name="Suficiente" />
+    <bpmn:sequenceFlow id="Flow_StockNoSuficiente_Fin" sourceRef="Gateway_StockSuficiente" targetRef="EndEvent_StockInsuficiente" name="Insuficiente" />
+    <bpmn:sequenceFlow id="Flow_AgregarItem_ReducirStock" sourceRef="Task_AgregarItemBD" targetRef="Task_ReducirStock" />
+    <bpmn:sequenceFlow id="Flow_ReducirStock_OK" sourceRef="Task_ReducirStock" targetRef="Task_ConfirmarPedido" />
+    <bpmn:sequenceFlow id="Flow_ObtenerCarrito_Crear" sourceRef="Task_ObtenerCarrito" targetRef="Gateway_CarritoVacio" />
+    <bpmn:sequenceFlow id="Flow_CarritoOK" sourceRef="Gateway_CarritoVacio" targetRef="Task_CrearOrden" name="Con items" />
+    <bpmn:sequenceFlow id="Flow_CarritoVacio_Fin" sourceRef="Gateway_CarritoVacio" targetRef="EndEvent_CarritoVacio" name="Vacío" />
+    <bpmn:sequenceFlow id="Flow_Crear_Persistir" sourceRef="Task_CrearOrden" targetRef="Task_PersistirOrden" />
+    <bpmn:sequenceFlow id="Flow_Persistir_VaciarCarrito" sourceRef="Task_PersistirOrden" targetRef="Task_VaciarCarrito" />
+    <bpmn:sequenceFlow id="Flow_VaciarCarrito_Confirmar" sourceRef="Task_VaciarCarrito" targetRef="Task_ActualizarEstado" />
+    <bpmn:sequenceFlow id="Flow_EstadoConfirmado_Fin" sourceRef="Task_ActualizarEstado" targetRef="EndEvent_PedidoCreado" />
+
+  </bpmn:process>
+</bpmn:definitions>

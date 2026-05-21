@@ -1,0 +1,30 @@
+-- 1. INSERTAR AUTORES (Primero, para evitar errores de llave foránea)
+INSERT INTO authors_tb (nombre, anio_nacimiento, anio_defuncion, pais_origen, sexo) VALUES ('Gabriel García Márquez', 1927, 2014, 'Colombia', 'Masculino');
+INSERT INTO authors_tb (nombre, anio_nacimiento, anio_defuncion, pais_origen, sexo) VALUES ('Isabel Allende', 1942, NULL, 'Chile', 'Femenino');
+INSERT INTO authors_tb (nombre, anio_nacimiento, anio_defuncion, pais_origen, sexo) VALUES ('Mario Vargas Llosa', 1936, NULL, 'Perú', 'Masculino');
+INSERT INTO authors_tb (nombre, anio_nacimiento, anio_defuncion, pais_origen, sexo) VALUES ('Jorge Luis Borges', 1899, 1986, 'Argentina', 'Masculino');
+INSERT INTO authors_tb (nombre, anio_nacimiento, anio_defuncion, pais_origen, sexo) VALUES ('Julio Cortázar', 1914, 1984, 'Argentina', 'Masculino');
+INSERT INTO authors_tb (nombre, anio_nacimiento, anio_defuncion, pais_origen, sexo) VALUES ('Laura Esquivel', 1950, NULL, 'México', 'Femenino');
+INSERT INTO authors_tb (nombre, anio_nacimiento, anio_defuncion, pais_origen, sexo) VALUES ('Carlos Ruiz Zafón', 1964, 2020, 'España', 'Masculino');
+
+-- 2. INSERTAR PRODUCTOS (Mapeado exacto a tu entidad Java)
+-- Nota: 'inventario_id' es como Hibernate mapea tu campo 'inventarioId'
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES (1,'9780307474728', 'Cien años de soledad', 'La historia de la familia Buendía en Macondo.', 25.50, 432, 1967, 'https://m.media-amazon.com/images/I/718ReAnAnNL.jpg', 'FICCION', 'FISICO', 1, 101);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(2,'9780307474735', 'El amor en los tiempos del cólera', 'Una historia de amor eterno.', 22.00, 368, 1985, 'dsadas', 'ROMANCE', 'FISICO', 1, 102);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(3,'9781501178078', 'La casa de los espíritus', 'Cuatro generaciones de una familia chilena.', 18.90, 448, 1982, 'sadasd', 'FICCION', 'FISICO', 2, 103);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(4,'9780062390622', 'La ciudad y los perros', 'Novela sobre la disciplina militar en Lima.', 20.00, 464, 1963, 'dasdasd', 'DRAMA', 'FISICO', 3, 104);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(5,'9780143105183', 'Aleph', 'Colección de cuentos cortos de Borges.', 15.00, 210, 1949, 'dasdasd', 'FANTASIA', 'FISICO', 4, 105);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(6,'9780345806031', 'Rayuela', 'Una narrativa no lineal icónica.', 19.99, 600, 1963, 'dasdasda', 'FICCION', 'FISICO', 5, 106);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(7,'9780385420174', 'Como agua para chocolate', 'Realismo mágico y gastronomía.', 14.50, 256, 1989, 'dasdasdas', 'ROMANCE', 'FISICO', 6, 107);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(8,'9781416404283', 'La sombra del viento', 'Un misterio en el Cementerio de los libros Olvidados.', 21.00, 576, 2001, 'https://images.com/viento.jpg', 'MISTERIO', 'FISICO', 7, 108);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(9,'9780307474742', 'Crónica de una muerte anunciada', 'Un relato de honor y destino.', 12.00, 160, 1981, 'https://images.com/muerte.jpg', 'MISTERIO', 'FISICO', 1, 109);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(10,'9781501178122', 'Eva Luna', 'La vida de una narradora de historias.', 17.50, 320, 1987, 'https://images.com/evaluna.jpg', 'FICCION', 'FISICO', 2, 110);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(11,'9780312420277', 'La tía Julia y el escribidor', 'Humor y romances prohibidos.', 16.00, 400, 1977, 'https://images.com/tiajulia.jpg', 'COMEDIA', 'FISICO', 3, 111);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(12,'9780143105190', 'Ficciones', 'Obra maestra de la literatura universal.', 14.00, 192, 1944, 'https://images.com/ficciones.jpg', 'FANTASIA', 'FISICO', 4, 112);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(13,'9780307834270', 'Bestiario', 'Cuentos fantásticos argentinos.', 13.00, 150, 1951, 'https://images.com/bestiario.jpg', 'FANTASIA', 'FISICO', 5, 113);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(14,'9781416404290', 'El juego del ángel', 'Precuela de La Sombra del Viento.', 23.00, 688, 2008, 'https://images.com/angel.jpg', 'MISTERIO', 'FISICO', 7, 114);
+INSERT INTO products_tb (id, isbn, titulo, descripcion, precio, paginas, anio_publicacion, image_url, categoria, tipo, author_id, inventario_id) VALUES(15,'9780062390639', 'Conversación en La Catedral', 'Un análisis de la corrupción política.', 24.00, 608, 1969, 'https://images.com/catedral.jpg', 'DRAMA', 'FISICO', 3, 115);
+
+-- Sincronizar secuencias después de inserts con IDs explícitos
+SELECT setval('products_tb_id_seq', (SELECT MAX(id) FROM products_tb));
+SELECT setval('authors_tb_id_seq', (SELECT MAX(id) FROM authors_tb));

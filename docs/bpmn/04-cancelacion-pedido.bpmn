@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  targetNamespace="http://libreria-microservicios.com/bpmn"
+  id="definitions-cancelacion">
+
+  <bpmn:process id="ProcesoCancelacionPedido" name="Cancelación de Pedido y Restauración de Stock" isExecutable="true">
+    
+    <bpmn:laneSet id="laneSet_04">
+      <bpmn:lane id="Lane_Usuario_Cancel" name="Usuario / Administrador">
+        <bpmn:flowNodeRef>StartEvent_Cancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SolicitarCancelacion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_VerOrdenCancelada</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_CancelOK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_CancelError</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Order_Cancel" name="Order Microservice">
+        <bpmn:flowNodeRef>Task_BuscarOrden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_EstadoCancelable</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RestaurarStockPorItem</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MarcarCancelada</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotificarCancelacion</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Inventory_Cancel" name="Inventory Microservice">
+        <bpmn:flowNodeRef>Task_BuscarInventarioPorProducto</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SumarStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ProductoExiste</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_BD_Cancel" name="Base de Datos">
+        <bpmn:flowNodeRef>Task_QueryOrdenByID</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_QueryItemsOrden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UpdateEstado</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_QueryInventoryByProduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UpdateStockAdd</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- EVENTOS -->
+    <bpmn:startEvent id="StartEvent_Cancel" name="Usuario solicita cancelar pedido">
+      <bpmn:outgoing>Flow_Start_Solicitar</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEvent_CancelOK" name="Pedido cancelado y stock restaurado">
+      <bpmn:incoming>Flow_Notificacion_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_CancelError" name="Error: no se puede cancelar">
+      <bpmn:incoming>Flow_EstadoNoCancelable_Fin</bpmn:incoming>
+      <bpmn:incoming>Flow_ProdNoExiste_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- TAREAS USUARIO -->
+    <bpmn:userTask id="Task_SolicitarCancelacion" name="Solicitar cancelación de orden #ID" camunda:assignee="usuario">
+      <bpmn:incoming>Flow_Start_Solicitar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Solicitar_Buscar</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_VerOrdenCancelada" name="Verificar estado final de la orden" camunda:assignee="usuario">
+      <bpmn:incoming>Flow_Notificacion_Ver</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ver_Fin</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- GATEWAYS -->
+    <bpmn:exclusiveGateway id="Gateway_EstadoCancelable" name="¿Estado permite cancelar?">
+      <bpmn:incoming>Flow_Buscar_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_Estado_OK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Estado_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_ProductoExiste" name="¿inventarioId ≠ null?">
+      <bpmn:incoming>Flow_GetProdInv_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_ProdExiste_SumarStock</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ProdNoExiste_Skip</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- TAREAS ORDER MICROSERVICE -->
+    <bpmn:serviceTask id="Task_BuscarOrden" name="DELETE /api/v1/orders/{id} (findById)">
+      <bpmn:incoming>Flow_Solicitar_Buscar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Buscar_BD</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_RestaurarStockPorItem" name="Por cada item: Feign → inventory.addStock(prodId, cantidad)">
+      <bpmn:incoming>Flow_Estado_OK</bpmn:incoming>
+      <bpmn:outgoing>Flow_Restaurar_GetProd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_MarcarCancelada" name="setEstado(CANCELADO) + save()">
+      <bpmn:incoming>Flow_SumarStock_OK</bpmn:incoming>
+      <bpmn:outgoing>Flow_Marcar_Notificar</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_NotificarCancelacion" name="Registrar evento de cancelación">
+      <bpmn:incoming>Flow_Marcar_Notificar</bpmn:incoming>
+      <bpmn:outgoing>Flow_Notificacion_Ver</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- TAREAS INVENTORY MICROSERVICE -->
+    <bpmn:serviceTask id="Task_BuscarInventarioPorProducto" name="Feign: getProductById(item.prodId) → get inventarioId">
+      <bpmn:incoming>Flow_Restaurar_GetProd</bpmn:incoming>
+      <bpmn:outgoing>Flow_GetProdInv_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_SumarStock" name="Feign: PATCH /inventory/{id}/add?quantity=n">
+      <bpmn:incoming>Flow_ProdExiste_SumarStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_SumarStock_DB</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- TAREAS BD -->
+    <bpmn:serviceTask id="Task_QueryOrdenByID" name="SELECT * FROM order_tb WHERE id = ?">
+      <bpmn:incoming>Flow_Buscar_BD</bpmn:incoming>
+      <bpmn:outgoing>Flow_Buscar_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_QueryItemsOrden" name="SELECT * FROM orden_items_tb WHERE order_id = ?">
+      <bpmn:incoming>Flow_Estado_OK</bpmn:incoming>
+      <bpmn:outgoing>Flow_Items_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_UpdateEstado" name="UPDATE order_tb SET estado = 'CANCELADO' WHERE id = ?">
+      <bpmn:incoming>Flow_Marcar_BD</bpmn:incoming>
+      <bpmn:outgoing>Flow_UpdateEstado_OK</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_QueryInventoryByProduct" name="SELECT * FROM inventory_tb WHERE product_id = ?">
+      <bpmn:incoming>Flow_GetProdInv_DB</bpmn:incoming>
+      <bpmn:outgoing>Flow_QueryInv_Result</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_UpdateStockAdd" name="UPDATE inventory_tb SET quantity = quantity + ? WHERE id = ?">
+      <bpmn:incoming>Flow_SumarStock_DB</bpmn:incoming>
+      <bpmn:outgoing>Flow_SumarStock_OK</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- FLUJOS -->
+    <bpmn:sequenceFlow id="Flow_Start_Solicitar" sourceRef="StartEvent_Cancel" targetRef="Task_SolicitarCancelacion" />
+    <bpmn:sequenceFlow id="Flow_Solicitar_Buscar" sourceRef="Task_SolicitarCancelacion" targetRef="Task_BuscarOrden" />
+    <bpmn:sequenceFlow id="Flow_Buscar_BD" sourceRef="Task_BuscarOrden" targetRef="Task_QueryOrdenByID" />
+    <bpmn:sequenceFlow id="Flow_Buscar_Result" sourceRef="Task_QueryOrdenByID" targetRef="Gateway_EstadoCancelable" />
+    <bpmn:sequenceFlow id="Flow_Estado_OK" sourceRef="Gateway_EstadoCancelable" targetRef="Task_RestaurarStockPorItem" name="Cancelable" />
+    <bpmn:sequenceFlow id="Flow_Estado_No" sourceRef="Gateway_EstadoCancelable" targetRef="EndEvent_CancelError" name="No cancelable" />
+    <bpmn:sequenceFlow id="Flow_Restaurar_GetProd" sourceRef="Task_RestaurarStockPorItem" targetRef="Task_BuscarInventarioPorProducto" />
+    <bpmn:sequenceFlow id="Flow_GetProdInv_Result" sourceRef="Task_BuscarInventarioPorProducto" targetRef="Gateway_ProductoExiste" />
+    <bpmn:sequenceFlow id="Flow_ProdExiste_SumarStock" sourceRef="Gateway_ProductoExiste" targetRef="Task_SumarStock" name="Existe" />
+    <bpmn:sequenceFlow id="Flow_ProdNoExiste_Skip" sourceRef="Gateway_ProductoExiste" targetRef="Task_SumarStock" name="No existe" />
+    <bpmn:sequenceFlow id="Flow_ProdNoExiste_Fin" sourceRef="Task_SumarStock" targetRef="EndEvent_CancelError" />
+    <bpmn:sequenceFlow id="Flow_SumarStock_DB" sourceRef="Task_SumarStock" targetRef="Task_UpdateStockAdd" />
+    <bpmn:sequenceFlow id="Flow_SumarStock_OK" sourceRef="Task_UpdateStockAdd" targetRef="Task_MarcarCancelada" />
+    <bpmn:sequenceFlow id="Flow_Marcar_Notificar" sourceRef="Task_MarcarCancelada" targetRef="Task_NotificarCancelacion" />
+    <bpmn:sequenceFlow id="Flow_Notificacion_Ver" sourceRef="Task_NotificarCancelacion" targetRef="Task_VerOrdenCancelada" />
+    <bpmn:sequenceFlow id="Flow_Notificacion_Fin" sourceRef="Task_VerOrdenCancelada" targetRef="EndEvent_CancelOK" />
+    <bpmn:sequenceFlow id="Flow_Ver_Fin" sourceRef="Task_VerOrdenCancelada" targetRef="EndEvent_CancelOK" />
+    <bpmn:sequenceFlow id="Flow_EstadoNoCancelable_Fin" sourceRef="Gateway_EstadoCancelable" targetRef="EndEvent_CancelError" />
+    <bpmn:sequenceFlow id="Flow_Items_Result" sourceRef="Task_QueryItemsOrden" targetRef="Task_RestaurarStockPorItem" />
+    <bpmn:sequenceFlow id="Flow_Marcar_BD" sourceRef="Task_MarcarCancelada" targetRef="Task_UpdateEstado" />
+    <bpmn:sequenceFlow id="Flow_UpdateEstado_OK" sourceRef="Task_UpdateEstado" targetRef="Task_NotificarCancelacion" />
+    <bpmn:sequenceFlow id="Flow_GetProdInv_DB" sourceRef="Task_BuscarInventarioPorProducto" targetRef="Task_QueryInventoryByProduct" />
+    <bpmn:sequenceFlow id="Flow_QueryInv_Result" sourceRef="Task_QueryInventoryByProduct" targetRef="Gateway_ProductoExiste" />
+
+  </bpmn:process>
+</bpmn:definitions>
