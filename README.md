@@ -93,6 +93,25 @@ E:\Microservicios\
 | `/api/v1/orders` | POST | Crear orden desde el carrito |
 | `/api/v1/orders/usuario/{id}` | GET | Órdenes del usuario (paginado) |
 
+## Documentación Técnica
+
+- [Diagramas de clases UML, componentes, secuencia y modelo relacional](docs/tecnica.md)
+- [Arquitectura del sistema](docs/arquitectura.md)
+- [ Auditoría y decisiones técnicas](docs/AUDITORIA.md)
+
+## Modelado de Procesos (BPMN 2.0)
+
+Los diagramas de procesos de negocio están en [`docs/bpmn/`](docs/bpmn/):
+
+| Proceso | Archivo |
+|---|---|
+| Registro y Autenticación | [`docs/bpmn/01-registro-autenticacion.bpmn`](docs/bpmn/01-registro-autenticacion.bpmn) |
+| Carrito y Creación de Pedido | [`docs/bpmn/02-carrito-pedido.bpmn`](docs/bpmn/02-carrito-pedido.bpmn) |
+| Gestión de Inventario | [`docs/bpmn/03-inventario.bpmn`](docs/bpmn/03-inventario.bpmn) |
+| Cancelación de Pedido | [`docs/bpmn/04-cancelacion-pedido.bpmn`](docs/bpmn/04-cancelacion-pedido.bpmn) |
+
+Abrir con Camunda Modeler, draw.io o Bizagi Modeler.
+
 ## Notas
 
 - `analytics-dashboard` tiene typo en el nombre del directorio (`analitycs-dashboard`)
