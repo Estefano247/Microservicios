@@ -68,9 +68,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<ProductResponse> getAllProducts(String categoria, String tipo, Long authorId, Pageable pageable) {
+    public Page<ProductResponse> getAllProducts(String categoria, String tipo, Long authorId, String titulo, Pageable pageable) {
         Page<Product> page;
-        if (categoria != null && tipo != null && authorId != null) {
+        if (categoria != null && titulo != null) {
+            page = productRepository.findByCategoriaAndTituloContainingIgnoreCase(
+                    Category.valueOf(categoria), titulo, pageable);
+        } else if (categoria != null && tipo != null && authorId != null) {
             page = productRepository.findByCategoriaAndTipoAndAuthorId(
                     Category.valueOf(categoria), ProductType.valueOf(tipo), authorId, pageable);
         } else if (categoria != null) {
@@ -79,6 +82,8 @@ public class ProductServiceImpl implements ProductService {
             page = productRepository.findByTipo(ProductType.valueOf(tipo), pageable);
         } else if (authorId != null) {
             page = productRepository.findByAuthorId(authorId, pageable);
+        } else if (titulo != null) {
+            page = productRepository.findByTituloContainingIgnoreCase(titulo, pageable);
         } else {
             page = productRepository.findAll(pageable);
         }

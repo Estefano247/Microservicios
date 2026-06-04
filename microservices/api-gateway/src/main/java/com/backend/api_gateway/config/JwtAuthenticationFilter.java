@@ -56,8 +56,9 @@ public class JwtAuthenticationFilter implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
+        String method = exchange.getRequest().getMethod().name();
 
-        if (isPublicPath(path)) {
+        if (isPublicPath(path, method)) {
             return chain.filter(exchange);
         }
 
@@ -115,11 +116,17 @@ public class JwtAuthenticationFilter implements WebFilter {
             .getBody();
     }
 
-    private boolean isPublicPath(String path) {
+    private boolean isPublicPath(String path, String method) {
         if (EXACT_PUBLIC_PATHS.contains(path)) {
             return true;
         }
-        return PREFIX_PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+        if (PREFIX_PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
+            return true;
+        }
+        if ("GET".equals(method) && (path.startsWith("/api/v1/products") || path.startsWith("/api/v1/authors"))) {
+            return true;
+        }
+        return false;
     }
 
     private Mono<Void> sendUnauthorized(ServerWebExchange exchange, String message) {

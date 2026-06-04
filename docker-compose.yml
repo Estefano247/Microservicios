@@ -294,6 +294,18 @@ services:
         max-file: "3"
     restart: always
 
+  frontend:
+    build:
+      context: ./libreria-frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports: [ "3000:80" ]
+    networks: [ microservices ]
+    depends_on:
+      api-gateway:
+        condition: service_started
+    restart: always
+
 volumes:
   postgres-data:
     driver: local

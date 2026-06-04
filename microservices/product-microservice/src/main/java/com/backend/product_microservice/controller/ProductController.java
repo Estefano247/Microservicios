@@ -41,8 +41,9 @@ public class ProductController {
             @RequestParam(required = false) String categoria,
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) Long authorId,
+            @RequestParam(required = false) String titulo,
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(productService.getAllProducts(categoria, tipo, authorId, pageable));
+        return ResponseEntity.ok(productService.getAllProducts(categoria, tipo, authorId, titulo, pageable));
     }
 
     @PutMapping("/{id}")
