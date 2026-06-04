@@ -7,8 +7,8 @@
 **Stack tecnológico principal:**
 | Tecnología | Versión | Uso |
 |---|---|---|
-| Java | 21 | Lenguaje base |
-| Spring Boot | 3.3.1 | Framework principal |
+| Java | 21 | Lenguaje base (backend) |
+| Spring Boot | 3.3.1 | Framework principal (backend) |
 | Spring Cloud | 2023.0.2 | Ecosistema microservicios |
 | Spring Cloud Config Server | - | Configuración centralizada (puerto 8888) |
 | Spring Cloud Netflix Eureka | - | Service Discovery (puerto 8761) |
@@ -19,17 +19,21 @@
 | Spring Data JPA / Hibernate | - | ORM |
 | Flyway | - | Migraciones de BD |
 | PostgreSQL | 15-alpine | Base de datos |
-| Maven | 3.9.12 | Build |
+| Maven | 3.9.12 | Build (backend) |
+| React | 19.2.6 | Frontend |
+| Vite | 8.0.12 | Build tool (frontend) |
+| Tailwind CSS | 4.3.0 | Estilos (frontend) |
+| React Router | 6.30.4 | Enrutamiento (frontend) |
 | Python + Streamlit | 3.9 | Dashboard analíticas |
 | Docker | - | Contenerización |
 
 ### Diagrama de Arquitectura
 
 ```
-                     ┌─────────────────────┐
-                     │   Cliente/Frontend   │
-                     │  (Next.js :3000)     │
-                     └──────────┬──────────┘
+                     ┌──────────────────────┐
+                     │   Frontend React     │
+                     │   (Vite :5173)       │
+                     └──────────┬───────────┘
                                 │
                      ┌──────────▼──────────┐
                      │   API Gateway       │
@@ -292,7 +296,7 @@ CREATE DATABASE order_db;
 | 15 | `spring.sql.init.mode: always` con Flyway | Configuración redundante | `user-microservice.yml`, `product-microservice.yml` |
 | 16 | IDs hardcodeados entre product e inventory | Acoplamiento frágil entre servicios | `V2__insert_test_data.sql` + `import.sql` |
 | 17 | `precioReferencia` sin null-check en `CartServiceImpl.mapToResponse()` | Potencial NullPointerException | `CartServiceImpl.java` |
-| 18 | CORS hardcodeado a `http://localhost:3000` | No funciona en producción/distintos entornos | `user-microservice/SecurityConfig.java` |
+| 18 | CORS hardcodeado a `http://localhost:3000` (frontend corre en :5173) | No funciona en producción/distintos entornos | `user-microservice/SecurityConfig.java` |
 | 19 | `ENTRYPOINT` duplicado en order Dockerfile | Línea 19 invalida a línea 17 (confuso) | `order-microservice/Dockerfile` |
 | 20 | `api-gateway/Dockerfile` compila `common-exception` | Innecesario (api-gateway no depende de common-exception) | `api-gateway/Dockerfile` |
 | 21 | Nombre de carpeta mal escrito: `analitycs-dashboard` | Inconsistente con service name `analytics-dashboard` | `analitycs-dashboard/` |

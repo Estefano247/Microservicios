@@ -703,5 +703,5 @@ erDiagram
 | 6 | `@Scheduled` faltante para desbloquear cuentas | Media |
 | 7 | `creadoEn` null en response de Order (falta `@CreationTimestamp`) | Baja |
 | 8 | `@Builder` ignora field initializers (`numeroOrden`) | Baja |
-| 9 | CORS hardcodeado a `http://localhost:3000` | Baja |
+| 9 | CORS hardcodeado a `http://localhost:3000` (frontend corre en :5173) | Baja |
 | 10 | Nombre de carpeta mal escrito: `analitycs-dashboard` | Baja |

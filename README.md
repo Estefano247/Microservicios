@@ -1,9 +1,10 @@
 # ECOMMERCE - Microservicios Librería
 
-Arquitectura de microservicios para una librería/tienda online construida con **Java 21**, **Spring Boot 3.3.1** y **Spring Cloud 2023.0.2**.
+Arquitectura de microservicios para una librería/tienda online construida con **Java 21**, **Spring Boot 3.3.1** y **Spring Cloud 2023.0.2**, con frontend en **React 19 + Vite 8 + Tailwind CSS 4**.
 
 ## Stack tecnológico
 
+### Backend
 - Java 21 + Spring Boot 3.3.1 + Spring Cloud 2023.0.2
 - Spring Cloud Gateway (API Gateway, puerto 8080)
 - Spring Cloud Config Server (Configuración centralizada, puerto 8888)
@@ -13,6 +14,12 @@ Arquitectura de microservicios para una librería/tienda online construida con *
 - Spring Security + JWT
 - Spring Cloud OpenFeign (comunicación entre servicios)
 - SpringDoc OpenAPI (Swagger UI)
+
+### Frontend
+- React 19 + Vite 8 + Tailwind CSS 4
+- React Router 6
+
+### Analytics
 - Python 3.9 + Streamlit (Dashboard de análisis)
 
 ## Servicios
@@ -27,27 +34,29 @@ Arquitectura de microservicios para una librería/tienda online construida con *
 | inventory-microservice | 8093 | inventory_db | Completo |
 | cart-microservice | 8094 | cart_db | Completo |
 | order-microservice | 8095 | order_db | Completo |
+| libreria-frontend | 5173 | (API via gateway) | Completo |
 | analytics-dashboard | 8501 | (directo DB) | Completo |
 
 ## Estructura del proyecto
 
 ```
-E:\Microservicios\
-├── config-server/          Servidor de configuración
-├── discovery-server/       Servicio de descubrimiento (Eureka)
-├── microservices/          Módulos de negocio
-│   ├── api-gateway/        Puerta de enlace
-│   ├── user-microservice/  Gestión de usuarios y autenticación
+Microservicios/
+├── config-server/             Servidor de configuración
+├── discovery-server/          Servicio de descubrimiento (Eureka)
+├── microservices/             Módulos de negocio
+│   ├── api-gateway/           Puerta de enlace
+│   ├── user-microservice/     Gestión de usuarios y autenticación
 │   ├── product-microservice/  Catálogo de productos
-│   ├── inventory-microservice/  Control de stock
-│   ├── cart-microservice/  Carrito de compras
-│   ├── order-microservice/  Gestión de pedidos
-│   └── common-exception/   Librería compartida de errores
-├── analitycs-dashboard/    Dashboard de análisis (Python/Streamlit)
-├── postgres-init/          Scripts de inicialización de BD
-├── docs/                   Documentación del proyecto
-├── docker-compose.yml      Orquestación completa
-└── pom.xml                 Proyecto raíz Maven
+│   ├── inventory-microservice/ Control de stock
+│   ├── cart-microservice/     Carrito de compras
+│   ├── order-microservice/    Gestión de pedidos
+│   └── common-exception/      Librería compartida de errores
+├── libreria-frontend/         Frontend React + Vite + Tailwind
+├── analitycs-dashboard/       Dashboard de análisis (Python/Streamlit)
+├── postgres-init/             Scripts de inicialización de BD
+├── docs/                      Documentación del proyecto
+├── docker-compose.yml         Orquestación completa
+└── pom.xml                    Proyecto raíz Maven
 ```
 
 ## Comunicación entre servicios (OpenFeign)
@@ -72,6 +81,8 @@ E:\Microservicios\
 
 ## Cómo ejecutar
 
+### Backend (microservicios)
+
 1. **Requisitos:** Docker y Docker Compose
 2. **Variables de entorno:** copiar `.env.example` a `.env` y configurar
 3. **Levantar servicios:**
@@ -79,6 +90,16 @@ E:\Microservicios\
    docker compose up -d
    ```
 4. El API Gateway estará disponible en `http://localhost:8080`
+
+### Frontend
+
+```bash
+cd libreria-frontend
+npm install
+npm run dev
+```
+
+El frontend estará disponible en `http://localhost:5173` (se comunica con el backend a través del API Gateway en `/api/v1/`).
 
 ## Endpoints verificados
 

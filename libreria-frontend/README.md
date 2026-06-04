@@ -1,16 +1,26 @@
-# React + Vite
+# Librería Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend de la tienda online de libros, construido con **React 19 + Vite 8 + Tailwind CSS 4**.
 
-Currently, two official plugins are available:
+## Características
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Catálogo de productos con búsqueda y filtrado por categorías
+- Carrito de compras (sidebar lateral) con soporte para invitados (localStorage) y usuarios autenticados (API)
+- Detalle de producto con descripción y tipo (Físico, Digital, Audiolibro)
+- Autenticación JWT (registro, inicio de sesión)
+- Perfil de usuario y gestión de pedidos
+- Panel administrativo (gestión de productos, inventario, usuarios, pedidos)
+- Diseño responsive con Tailwind CSS
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Iniciar servidor de desarrollo (puerto 5173) |
+| `npm run build` | Compilar para producción |
+| `npm run preview` | Previsualizar compilación |
+| `npm run lint` | Ejecutar ESLint |
 
-## Expanding the ESLint configuration
+## API
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+El frontend se comunica con el backend a través del API Gateway en `/api/v1/`. La configuración del proxy se define en `vite.config.js` para desarrollo.
