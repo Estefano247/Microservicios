@@ -1,0 +1,19 @@
+# Dependencias y builds
+**/node_modules/
+**/dist/
+**/target/
+**/build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Maven wrapper local
+.mvn/wrapper/maven-wrapper.jar

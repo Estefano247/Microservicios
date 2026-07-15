@@ -1,0 +1,106 @@
+server:
+  port: 8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+      routes:
+        - id: user-service
+          uri: lb://USER-MICROSERVICE
+          predicates:
+            - Path=/api/v1/users/**
+        - id: product-service
+          uri: lb://PRODUCT-MICROSERVICE
+          predicates:
+            - Path=/api/v1/products/**
+        - id: author-service
+          uri: lb://PRODUCT-MICROSERVICE
+          predicates:
+            - Path=/api/v1/authors/**
+        - id: inventory-service
+          uri: lb://INVENTORY-MICROSERVICE
+          predicates:
+            - Path=/api/v1/inventory/**
+        - id: cart-service
+          uri: lb://CART-MICROSERVICE
+          predicates:
+            - Path=/api/v1/cart/**
+        - id: order-service
+          uri: lb://ORDER-MICROSERVICE
+          predicates:
+            - Path=/api/v1/orders/**
+        - id: user-service-docs
+          uri: lb://USER-MICROSERVICE
+          predicates:
+            - Path=/user-docs/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /user-docs/(?<segment>.*)
+                replacement: /${segment}
+        - id: product-service-docs
+          uri: lb://PRODUCT-MICROSERVICE
+          predicates:
+            - Path=/product-docs/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /product-docs/(?<segment>.*)
+                replacement: /${segment}
+        - id: inventory-service-docs
+          uri: lb://INVENTORY-MICROSERVICE
+          predicates:
+            - Path=/inventory-docs/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /inventory-docs/(?<segment>.*)
+                replacement: /${segment}
+        - id: cart-service-docs
+          uri: lb://CART-MICROSERVICE
+          predicates:
+            - Path=/cart-docs/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /cart-docs/(?<segment>.*)
+                replacement: /${segment}
+        - id: order-service-docs
+          uri: lb://ORDER-MICROSERVICE
+          predicates:
+            - Path=/order-docs/**
+          filters:
+            - name: RewritePath
+              args:
+                regexp: /order-docs/(?<segment>.*)
+                replacement: /${segment}
+        - id: python-dashboard
+          uri: lb://analytics-dashboard 
+          predicates:
+            - Path=/analytics/**
+          filters:
+            - StripPrefix=1
+        - id: nextjs-app
+          uri: ${FRONTEND_URL:http://localhost:3000}
+          predicates:
+            - Path=/
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: DEBUG
+
+jwt:
+  secret:
+    key: ${JWT_SECRET_KEY}
+

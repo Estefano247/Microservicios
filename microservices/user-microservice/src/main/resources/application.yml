@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: user-microservice
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 6000
+        max-attempts: 100
+  config:
+    import: "configserver:http://config-server:8888"
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:8091}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+jwt:
+  secret:
+    key: ${JWT_SECRET_KEY}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+session:
+  max-per-user: ${SESSION_MAX_PER_USER:5}
+  expiration-hours: ${SESSION_EXPIRATION_HOURS:24}

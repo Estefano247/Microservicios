@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: product-microservice
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 6000
+        max-attempts: 100
+  config:
+    import: "configserver:http://config-server:8888"

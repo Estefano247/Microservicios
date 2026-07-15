@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 6000
+        max-attempts: 100
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            rate-limiter: "#{@defaultRateLimiter}"
+            key-resolver: "#{@principalNameKeyResolver}"
+  config:
+    import: "configserver:http://config-server:8888"
+
+server:
+  max-http-request-header-size: 16384
+  netty:
+    max-initial-line-length: 16384
