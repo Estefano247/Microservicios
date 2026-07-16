@@ -3,11 +3,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity @Table(name = "products_tb")
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
+@Where(clause = "is_active = true")
 public class Product {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

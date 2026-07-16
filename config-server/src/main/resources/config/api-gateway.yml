@@ -84,16 +84,10 @@ spring:
               args:
                 regexp: /order-docs/(?<segment>.*)
                 replacement: /${segment}
-        - id: python-dashboard
-          uri: lb://analytics-dashboard 
-          predicates:
-            - Path=/analytics/**
-          filters:
-            - StripPrefix=1
         - id: nextjs-app
           uri: ${FRONTEND_URL:http://localhost:3000}
           predicates:
-            - Path=/
+            - Path=/**
 
 logging:
   level:

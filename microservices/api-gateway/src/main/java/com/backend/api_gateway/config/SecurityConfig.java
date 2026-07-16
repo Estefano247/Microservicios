@@ -54,6 +54,7 @@ public class SecurityConfig {
                     "/api/v1/inventory/**"
                 ).permitAll()
                 .pathMatchers("/api/v1/users/admin/**").hasRole("ADMIN")
+                .pathMatchers("/api/v1/cart/admin/**").hasRole("ADMIN")
                 .anyExchange().authenticated()
             )
             // 401 sin cabecera "WWW-Authenticate: Basic": evita que el navegador

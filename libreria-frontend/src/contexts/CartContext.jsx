@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { guestCart } from '../utils/guestCart';
 import { api } from '../api/client';
@@ -9,6 +9,9 @@ export function CartProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const currentUserIdRef = useRef(user?.id);
+
+  currentUserIdRef.current = user?.id;
 
   const isGuest = !isAuthenticated;
 
@@ -18,11 +21,24 @@ export function CartProvider({ children }) {
       return;
     }
     if (!user) return;
+    const loadingUser = user.id;
     setLoading(true);
-    api.cart.get(user.id)
-      .then(data => setItems(data.items || []))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+    api.cart.get(loadingUser)
+      .then(data => {
+        if (currentUserIdRef.current === loadingUser) {
+          setItems(data.items || []);
+        }
+      })
+      .catch(() => {
+        if (currentUserIdRef.current === loadingUser) {
+          setItems([]);
+        }
+      })
+      .finally(() => {
+        if (currentUserIdRef.current === loadingUser) {
+          setLoading(false);
+        }
+      });
   }, [isGuest, user]);
 
   useEffect(() => { loadCart() }, [loadCart]);
@@ -65,7 +81,7 @@ export function CartProvider({ children }) {
     }
   };
 
-  const total = items.reduce((sum, i) => sum + Number(i.subtotal || i.precioUnitario * i.cantidad), 0);
+  const total = items.reduce((sum, i) => sum + Number(i.subtotal != null ? i.subtotal : i.precioUnitario * i.cantidad), 0);
   const count = items.reduce((sum, i) => sum + i.cantidad, 0);
 
   return (

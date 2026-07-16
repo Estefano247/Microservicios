@@ -19,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -96,16 +98,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Reducir stock para cada producto
-        cart.items().forEach(cartItem -> {
-            try {
+        try {
+            for (var cartItem : cart.items()) {
                 ProductResponse producto = productClient.getProductById(cartItem.productoId());
                 if (producto.inventarioId() != null) {
                     inventoryClient.reduceStock(producto.inventarioId(), cartItem.cantidad());
                 }
-            } catch (FeignException e) {
-                log.error("Error al reducir stock para producto {}: {}", cartItem.productoId(), e.getMessage());
             }
-        });
+        } catch (FeignException e) {
+            log.error("Error al reducir stock: {}", e.getMessage());
+            throw new RuntimeException("No se pudo reducir el stock. Cancelando creación de orden.", e);
+        }
 
         try {
             cartClient.clearCart(request.usuarioId());
@@ -133,14 +136,16 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public Page<OrderResponse> getOrdersByUsuarioId(Long usuarioId, Pageable pageable) {
+        Map<Long, String> cache = new HashMap<>();
         return orderRepository.findByUsuarioIdOrderByCreadoEnDesc(usuarioId, pageable)
-                .map(this::mapToResponse);
+                .map(order -> mapToResponseWithCache(order, cache));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable).map(this::mapToResponse);
+        Map<Long, String> cache = new HashMap<>();
+        return orderRepository.findAll(pageable).map(order -> mapToResponseWithCache(order, cache));
     }
 
     @Override
@@ -192,15 +197,20 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderResponse mapToResponse(Order order) {
+        return mapToResponseWithCache(order, new HashMap<>());
+    }
+
+    private OrderResponse mapToResponseWithCache(Order order, Map<Long, String> tituloCache) {
         List<OrderItemResponse> itemResponses = order.getItems().stream()
                 .map(item -> {
-                    String titulo = "";
-                    try {
-                        ProductResponse producto = productClient.getProductById(item.getProductoId());
-                        titulo = producto.titulo();
-                    } catch (FeignException e) {
-                        log.warn("No se pudo obtener título para producto {}: {}", item.getProductoId(), e.getMessage());
-                    }
+                    String titulo = tituloCache.computeIfAbsent(item.getProductoId(), id -> {
+                        try {
+                            return productClient.getProductById(id).titulo();
+                        } catch (FeignException e) {
+                            log.warn("No se pudo obtener título para producto {}: {}", id, e.getMessage());
+                            return "";
+                        }
+                    });
                     return new OrderItemResponse(
                             item.getProductoId(),
                             titulo,

@@ -22,7 +22,7 @@ public class Author {
     @Column(name = "idempotency_key", unique = true, length = 36)
     private String idempotencyKey;
 
-    @OneToMany(mappedBy = "author", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "author", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Product> libros;
 
     @CreationTimestamp @Column(updatable = false)

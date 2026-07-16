@@ -26,11 +26,15 @@ export default function UsersManager() {
     catch (e) { alert(e.message); }
   };
 
+  const reactivateUserByEmail = async (email) => {
+    try { await api.users.adminReactivate(email); loadUsers(); }
+    catch (e) { alert(e.message); }
+  };
+
   const reactivateUser = async () => {
     const email = prompt('Email del usuario a reactivar:');
     if (!email) return;
-    try { await api.users.adminReactivate(email); loadUsers(); }
-    catch (e) { alert(e.message); }
+    await reactivateUserByEmail(email);
   };
 
   return (
@@ -94,9 +98,13 @@ export default function UsersManager() {
                           </span>
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          {active && (
+                          {active ? (
                             <button onClick={() => deactivateUser(u.id)} className="btn btn-danger btn-sm">
                               Desactivar
+                            </button>
+                          ) : (
+                            <button onClick={() => reactivateUserByEmail(u.email)} className="btn btn-secondary btn-sm">
+                              Reactivar
                             </button>
                           )}
                         </td>

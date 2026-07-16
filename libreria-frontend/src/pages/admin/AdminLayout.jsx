@@ -1,19 +1,14 @@
 import { NavLink, Outlet, Link } from 'react-router-dom';
+import { useMemo } from 'react';
 import Icon from '../../components/ui/Icon';
 
-function analyticsUrl() {
-  const token = localStorage.getItem('token');
-  const base = '/analytics';
-  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
-}
-
-const NAV = [
+const STATIC_NAV = [
   { to: '/admin', label: 'Resumen', icon: 'dashboard', end: true },
   { to: '/admin/products', label: 'Productos', icon: 'book' },
   { to: '/admin/inventory', label: 'Inventario', icon: 'box' },
   { to: '/admin/orders', label: 'Pedidos', icon: 'receipt' },
   { to: '/admin/users', label: 'Usuarios', icon: 'users' },
-  { to: analyticsUrl(), label: 'Analítica', icon: 'chartBar', external: true },
+  { to: '/admin/authors', label: 'Autores', icon: 'edit' },
 ];
 
 function NavItem({ item, onClick }) {
@@ -48,6 +43,11 @@ function NavItem({ item, onClick }) {
 }
 
 export default function AdminLayout() {
+  const nav = useMemo(() => [
+    ...STATIC_NAV,
+    { to: '/admin/analytics', label: 'Analítica', icon: 'chartBar' },
+  ], []);
+
   return (
     <div className="page py-6 lg:py-8">
       <div className="grid gap-6 lg:grid-cols-[15rem_1fr]">
@@ -65,7 +65,7 @@ export default function AdminLayout() {
 
           {/* Nav — horizontal en móvil, vertical en escritorio */}
           <nav className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <div key={item.to} className="shrink-0 lg:shrink">
                 <NavItem item={item} />
               </div>

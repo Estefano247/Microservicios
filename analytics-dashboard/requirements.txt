@@ -1,6 +1,0 @@
-streamlit
-pandas
-sqlalchemy
-psycopg2
-plotly
-py_eureka_client

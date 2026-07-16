@@ -18,6 +18,7 @@ public interface UserRepository {
     Optional<User> findByEmail(String email);
     Optional<User> findByEmailIncludingDeleted(String email);
     Page<User> findAllActive(Pageable pageable);
+    Page<User> findAll(Pageable pageable);
     List<User> findAllActiveByRole(Role role);
     List<User> findLockedUsersBefore(LocalDateTime expirationTime);
     User save(User user);

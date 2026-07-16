@@ -32,7 +32,9 @@ async function request(endpoint, options = {}) {
   }
 
   if (res.status === 204) return null;
-  return res.json();
+  const ct = res.headers.get('content-type');
+  if (ct && ct.includes('application/json')) return res.json();
+  return res.text();
 }
 
 export const api = {
@@ -80,6 +82,7 @@ export const api = {
     addItem: (userId, data) => request(`/cart/usuario/${userId}/items`, { method: 'POST', body: JSON.stringify(data) }),
     removeItem: (userId, productId) => request(`/cart/usuario/${userId}/items/${productId}`, { method: 'DELETE' }),
     clear: (userId) => request(`/cart/usuario/${userId}`, { method: 'DELETE' }),
+    adminAll: () => request('/cart/admin/all'),
   },
   orders: {
     create: (data) => request('/orders', { method: 'POST', body: JSON.stringify(data) }),

@@ -47,7 +47,10 @@ public class ProductServiceImpl implements ProductService {
 
         try {
             InventoryRequest invRequest = new InventoryRequest(product.getId(), product.getTitulo(),
-                    request.initialStock(), 5, 100, "Almacén central");
+                    request.initialStock(),
+                    request.minStock() != null ? request.minStock() : 5,
+                    request.maxStock() != null ? request.maxStock() : 100,
+                    request.ubicacion() != null ? request.ubicacion() : "Almacén central");
             ResponseEntity<InventoryResponse> invResp = inventoryClient.createInventory(invRequest);
             if (invResp.getStatusCode().is2xxSuccessful() && invResp.getBody() != null) {
                 product.setInventarioId(invResp.getBody().id());
@@ -126,7 +129,8 @@ public class ProductServiceImpl implements ProductService {
                 throw new InventoryServiceException("No se pudo eliminar el inventario asociado.");
             }
         }
-        productRepository.delete(product);
+        product.setIsActive(false);
+        productRepository.save(product);
     }
 
     private Product findProductOrThrow(Long id) {

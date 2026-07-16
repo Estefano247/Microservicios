@@ -11,16 +11,25 @@ export default function ProductsManager() {
   const [products, setProducts] = useState({ content: [], totalPages: 0, number: 0 });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
+  const [search, setSearch] = useState('');
 
-  const loadProducts = () => {
+  const loadProducts = (p = page, q = search) => {
     setLoading(true);
-    api.products.list({ page, size: 10, sort: 'id,desc' })
+    const params = { page: p, size: 10, sort: 'id,desc' };
+    if (q) params.titulo = q;
+    api.products.list(params)
       .then(setProducts)
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadProducts(); }, [page]);
+  useEffect(() => { loadProducts(page, search); }, [page]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPage(0);
+    loadProducts(0, search);
+  };
 
   const deleteProduct = async (id) => {
     if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
@@ -40,12 +49,28 @@ export default function ProductsManager() {
         </Link>
       </header>
 
+      <form onSubmit={handleSearch} className="mb-4">
+        <div className="relative">
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por título…"
+            className="input w-full pl-9 pr-20"
+          />
+          <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700">
+            Buscar
+          </button>
+        </div>
+      </form>
+
       {loading ? (
         <PageLoader />
       ) : !products.content?.length ? (
         <div className="card py-10">
-          <EmptyState icon="book" title="Sin productos" description="Crea tu primer producto para empezar.">
-            <Link to="/admin/products/new" className="btn btn-primary"><Icon name="plus" className="w-4 h-4" /> Nuevo producto</Link>
+          <EmptyState icon="book" title={search ? 'Sin resultados' : 'Sin productos'} description={search ? `No hay productos que coincidan con "${search}".` : 'Crea tu primer producto para empezar.'}>
+            {!search && <Link to="/admin/products/new" className="btn btn-primary"><Icon name="plus" className="w-4 h-4" /> Nuevo producto</Link>}
           </EmptyState>
         </div>
       ) : (

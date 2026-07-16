@@ -21,6 +21,8 @@ import ProductForm from './pages/admin/ProductForm';
 import UsersManager from './pages/admin/UsersManager';
 import OrdersManager from './pages/admin/OrdersManager';
 import InventoryManager from './pages/admin/InventoryManager';
+import AdminAnalytics from './pages/admin/Analytics';
+import AuthorsManager from './pages/admin/AuthorsManager';
 
 export default function App() {
   return (
@@ -49,6 +51,8 @@ export default function App() {
                     <Route path="users" element={<UsersManager />} />
                     <Route path="orders" element={<OrdersManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
+                    <Route path="analytics" element={<AdminAnalytics />} />
+                    <Route path="authors" element={<AuthorsManager />} />
                   </Route>
                 </Routes>
               </main>

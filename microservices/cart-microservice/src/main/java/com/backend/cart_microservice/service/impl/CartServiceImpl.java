@@ -14,6 +14,7 @@ import com.backend.cart_microservice.repository.CartRepository;
 import com.backend.cart_microservice.repository.IdempotencyRecordRepository;
 import com.backend.cart_microservice.service.CartService;
 import com.backend.cart_microservice.exception.ResourceNotFoundException;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +26,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -54,22 +56,10 @@ public class CartServiceImpl implements CartService {
         // 3. Buscar o crear carrito
         Cart carrito = getOrCreateCart(usuarioId);
 
-        // 4. Verificar stock si el producto tiene inventario
+        // 4. Buscar item existente en el carrito
         Optional<Cart.CartItem> itemExistente = carrito.getItems().stream()
                 .filter(item -> item.getProductoId().equals(request.productoId()))
                 .findFirst();
-
-        int totalQuantity = request.cantidad();
-        if (itemExistente.isPresent()) {
-            totalQuantity += itemExistente.get().getCantidad();
-        }
-
-        if (producto.inventarioId() != null) {
-            InventoryResponse inventory = inventoryClient.getInventoryByProductId(producto.id());
-            if (inventory.cantidad() < totalQuantity) {
-                throw new RuntimeException("Stock insuficiente. Disponible: " + inventory.cantidad() + ", solicitado: " + totalQuantity);
-            }
-        }
 
         // 5. Lógica de items
         if (itemExistente.isPresent()) {
@@ -98,17 +88,20 @@ public class CartServiceImpl implements CartService {
                     .findFirst();
             if (existente.isPresent()) {
                 existente.get().setCantidad(existente.get().getCantidad() + request.cantidad());
+            } else {
+                Cart.CartItem nuevoItem = Cart.CartItem.builder()
+                        .productoId(producto.id())
+                        .cantidad(request.cantidad())
+                        .precioReferencia(producto.precio())
+                        .metadatos(producto.titulo())
+                        .build();
+                carrito.getItems().add(nuevoItem);
             }
             carrito.setActualizadoEn(Instant.now());
             carrito = cartRepository.save(carrito);
         }
 
-        // 6. Descontar stock del inventario (si aplica)
-        if (producto.inventarioId() != null) {
-            inventoryClient.reduceStock(producto.inventarioId(), request.cantidad());
-        }
-
-        // 7. Persistir idempotency key si se proporcionó
+        // 6. Persistir idempotency key ANTES de reducir stock
         if (request.idempotencyKey() != null && !request.idempotencyKey().isBlank()) {
             IdempotencyRecord record = IdempotencyRecord.builder()
                     .idempotencyKey(request.idempotencyKey())
@@ -119,6 +112,18 @@ public class CartServiceImpl implements CartService {
                 idempotencyRecordRepository.save(record);
             } catch (DataIntegrityViolationException e) {
                 log.info("Idempotency key {} ya registrada por otra transacción concurrente", request.idempotencyKey());
+                return mapToResponse(carrito);
+            }
+        }
+
+        // 7. Descontar stock del inventario solo después de confirmar idempotencia
+        //     El inventory-service ya valida stock bajo PESSIMISTIC_WRITE lock, de forma atómica
+        if (producto.inventarioId() != null) {
+            try {
+                inventoryClient.reduceStock(producto.inventarioId(), request.cantidad());
+            } catch (FeignException e) {
+                log.error("Error al reducir stock para producto {}: {}", request.productoId(), e.getMessage());
+                throw new RuntimeException("No se pudo reservar stock suficiente para el producto");
             }
         }
 
@@ -146,14 +151,22 @@ public class CartServiceImpl implements CartService {
             throw new ResourceNotFoundException("El producto " + productoId + " no está en el carrito");
         }
         Cart.CartItem item = maybe.get();
-        // restablecer stock si aplica
+        // Restablecer stock si aplica
+        Long inventarioId = null;
         try {
             ProductResponse producto = productClient.getProductById(item.getProductoId());
-            if (producto.inventarioId() != null) {
-                inventoryClient.addStock(producto.inventarioId(), item.getCantidad());
+            inventarioId = producto.inventarioId();
+        } catch (FeignException e) {
+            log.warn("No se pudo obtener producto {} para devolver stock: {}", item.getProductoId(), e.getMessage());
+        }
+
+        if (inventarioId != null) {
+            try {
+                inventoryClient.addStock(inventarioId, item.getCantidad());
+            } catch (FeignException e) {
+                log.error("Error crítico devolviendo stock para producto {}: {}", item.getProductoId(), e.getMessage());
+                throw new RuntimeException("No se pudo devolver el stock al inventario. Operación cancelada.", e);
             }
-        } catch (Exception e) {
-            log.warn("Error devolviendo stock para producto {}: {}", item.getProductoId(), e.getMessage());
         }
 
         carrito.getItems().remove(item);
@@ -179,19 +192,28 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el carrito para eliminar"));
 
         // Antes de borrar, devolvemos el stock de cada item al inventario
-        carrito.getItems().forEach(item -> {
+        for (var item : carrito.getItems()) {
             try {
                 ProductResponse producto = productClient.getProductById(item.getProductoId());
                 if (producto.inventarioId() != null) {
                     inventoryClient.addStock(producto.inventarioId(), item.getCantidad());
                 }
-            } catch (Exception e) {
-                log.warn("No se pudo devolver stock para producto {}: {}", item.getProductoId(), e.getMessage());
+            } catch (FeignException e) {
+                log.error("Error crítico devolviendo stock para producto {}: {}", item.getProductoId(), e.getMessage());
+                throw new RuntimeException("No se pudo devolver stock. Cancelando limpieza del carrito.", e);
             }
-        });
+        }
 
         // eliminar entidad
         cartRepository.delete(carrito);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CartResponse> getAllCarts() {
+        return cartRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     private CartResponse mapToResponse(Cart cart) {

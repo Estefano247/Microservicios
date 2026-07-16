@@ -81,6 +81,9 @@ export default function Cart() {
     setOrdering(true);
     api.orders.create({ usuarioId: user.id })
       .then(() => {
+        return api.cart.clear(user.id);
+      })
+      .then(() => {
         guestCart.clear();
         addToast('¡Pedido creado exitosamente!');
         navigate('/profile/orders', { replace: true });

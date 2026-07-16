@@ -82,16 +82,21 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(Pageable pageable) {
-        Page<User> userPage = repository.findAllActive(pageable);
+        Page<User> userPage = repository.findAll(pageable);
         return userPage.map(mapper::toResponseDTO);
     }
 
     @Override
     @Transactional
     public String deleteUser(Long userId) {
-        User user = validationService.validateUserExists(userId);
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con ID: " + userId));
+        if (!user.isEnabled()) {
+            return "La cuenta ya se encuentra desactivada";
+        }
         user.setEnabled(false);
         repository.save(user);
+        sessionService.invalidateAllUserSessions(userId);
         return "Usuario con ID " + userId + " desactivado correctamente";
     }
 

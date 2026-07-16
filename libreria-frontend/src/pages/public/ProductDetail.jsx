@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import { useToast } from '../../components/Toast';
-import { guestCart } from '../../utils/guestCart';
 import {
   CATEGORY_LABELS, TYPE_LABELS, TYPE_BADGE, isDigitalType, formatPrice,
 } from '../../constants/catalog';
@@ -37,6 +37,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { addToCart: addToCartCtx } = useCart();
   const { addToast } = useToast();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,11 +61,7 @@ export default function ProductDetail() {
   const addToCart = async () => {
     setAdding(true);
     try {
-      if (isAuthenticated) {
-        await api.cart.addItem(user.id, { productoId: product.id, cantidad: quantity });
-      } else {
-        guestCart.addItem(product, quantity);
-      }
+      await addToCartCtx(product, quantity);
       addToast('Agregado al carrito');
       navigate('/cart');
     } catch (e) {

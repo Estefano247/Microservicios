@@ -20,6 +20,7 @@ public class Order {
     private Long id;
 
     @Column(name = "numero_orden", nullable = false, unique = true, length = 36)
+    @Builder.Default
     private String numeroOrden = UUID.randomUUID().toString();
 
     @Column(name = "idempotency_key", unique = true, length = 36)
@@ -37,9 +38,11 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 32)
+    @Builder.Default
     private EstadoOrden estado = EstadoOrden.PENDIENTE;
 
     @Column(name = "creado_en")
+    @Builder.Default
     private Instant creadoEn = Instant.now();
 
     @Version

@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/cart")
@@ -38,6 +39,12 @@ public class CartController {
     public ResponseEntity<Void> clearCart(@PathVariable Long usuarioId) {
         cartService.clearCart(usuarioId); // Deberás añadir este método al Service
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Obtener todos los carritos (admin / analytics)")
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<CartResponse>> getAllCarts() {
+        return ResponseEntity.ok(cartService.getAllCarts());
     }
 
     @Operation(summary = "Eliminar un ítem del carrito y devolver stock")

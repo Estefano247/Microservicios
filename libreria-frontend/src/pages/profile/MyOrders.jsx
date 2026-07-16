@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/Toast';
@@ -55,7 +56,7 @@ export default function MyOrders() {
             title="Aún no tienes pedidos"
             description="Cuando realices tu primera compra, aparecerá aquí."
           >
-            <a href="/" className="btn btn-primary"><Icon name="book" className="w-4 h-4" /> Explorar libros</a>
+            <Link to="/" className="btn btn-primary"><Icon name="book" className="w-4 h-4" /> Explorar libros</Link>
           </EmptyState>
         </div>
       ) : (

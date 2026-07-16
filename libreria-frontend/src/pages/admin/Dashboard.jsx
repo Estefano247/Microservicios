@@ -30,13 +30,6 @@ function MetricCard({ icon, label, value, tone = 'brand', loading, hint }) {
   );
 }
 
-const QUICK = [
-  { title: 'Productos', desc: 'Gestiona el catálogo de libros', link: '/admin/products', icon: 'book' },
-  { title: 'Inventario', desc: 'Controla el stock disponible', link: '/admin/inventory', icon: 'box' },
-  { title: 'Pedidos', desc: 'Revisa y actualiza pedidos', link: '/admin/orders', icon: 'receipt' },
-  { title: 'Usuarios', desc: 'Administra las cuentas', link: '/admin/users', icon: 'users' },
-];
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ products: 0, orders: 0, users: 0, lowStock: 0 });
   const [loading, setLoading] = useState(true);
@@ -74,7 +67,12 @@ export default function AdminDashboard() {
 
       <h2 className="mb-3 mt-10 font-display text-xl font-semibold text-ink">Accesos rápidos</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {QUICK.map((c) => (
+        {[
+          { title: 'Productos', desc: 'Gestiona el catálogo de libros', link: '/admin/products', icon: 'book' },
+          { title: 'Inventario', desc: 'Controla el stock disponible', link: '/admin/inventory', icon: 'box' },
+          { title: 'Pedidos', desc: 'Revisa y actualiza pedidos', link: '/admin/orders', icon: 'receipt' },
+          { title: 'Usuarios', desc: 'Administra las cuentas', link: '/admin/users', icon: 'users' },
+        ].map((c) => (
           <Link key={c.title} to={c.link} className="card group flex items-center gap-4 p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]">
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white">
               <Icon name={c.icon} className="w-6 h-6" />

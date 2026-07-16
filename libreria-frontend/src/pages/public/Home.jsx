@@ -208,15 +208,6 @@ export default function Home() {
   if (!showLanding) {
     return (
       <div>
-        <div className="border-b border-line bg-surface-soft">
-          <form onSubmit={handleSearch} className="page flex max-w-xl gap-2 py-6">
-            <div className="relative flex-1">
-              <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por título o autor…" className="input py-3 pl-12" />
-            </div>
-            <button type="submit" className="btn btn-primary btn-lg shrink-0">Buscar</button>
-          </form>
-        </div>
         {catalog}
       </div>
     );

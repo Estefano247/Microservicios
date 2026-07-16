@@ -2,6 +2,7 @@ package com.backend.cart_microservice.service;
 
 import com.backend.cart_microservice.dto.AddToCartRequest;
 import com.backend.cart_microservice.dto.CartResponse;
+import java.util.List;
 
 public interface CartService {
     
@@ -15,4 +16,6 @@ public interface CartService {
     void clearCart(Long usuarioId);
 
     CartResponse removeItem(Long usuarioId, Long productoId);
+
+    List<CartResponse> getAllCarts();
 }

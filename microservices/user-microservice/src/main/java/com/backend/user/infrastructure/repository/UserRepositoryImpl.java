@@ -57,6 +57,11 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public Page<User> findAll(Pageable pageable) {
+        return jpaRepository.findAll(pageable);
+    }
+
+    @Override
     public List<User> findAllActiveByRole(Role role) {
         return jpaRepository.findAllActiveByRole(role);
     }
